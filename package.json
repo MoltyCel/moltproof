@@ -1,0 +1,42 @@
+{
+  "name": "moltproof",
+  "version": "0.1.0",
+  "description": "Read-only verifier: did an on-chain agent keep its publicly committed AAE mandate? Recomputable from public chain data.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "aae",
+    "erc-8004",
+    "did",
+    "trust",
+    "verifier",
+    "recomputable",
+    "base",
+    "hyperliquid",
+    "x402",
+    "agents"
+  ],
+  "author": "CryptoKRI GmbH / MolTrust",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@hono/node-server": "^1.19.9",
+    "hono": "^4.12.3",
+    "viem": "^2.46.3",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: MoltProof API
+  version: 0.1.0
+  description: >
+    Read-only verifier for on-chain agent mandate adherence. Accepts only public
+    inputs (agent address / DID / mandate ref). No keys, no custody, no execution.
+    Every verdict is recomputable from public chain data + the public mandate.
+  license:
+    name: Apache-2.0
+servers:
+  - url: https://api.moltrust.ch/proof
+    description: production (pending deploy)
+tags:
+  - name: verdict
+  - name: mandate
+  - name: meta
+paths:
+  /verdict-free/{agent}:
+    get:
+      tags: [verdict]
+      summary: Verdict only (free, 1 request / 10 min)
+      parameters: [{ $ref: "#/components/parameters/Agent" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VerdictFree" } } } }
+        "422": { $ref: "#/components/responses/SecretRejected" }
+        "429": { description: rate limited }
+  /verdict/{agent}:
+    get:
+      tags: [verdict]
+      summary: Full per-check breakdown ($0.05 via x402)
+      parameters: [{ $ref: "#/components/parameters/Agent" }]
+      responses:
+        "200": { description: OK }
+        "402": { description: payment required (x402) }
+        "422": { $ref: "#/components/responses/SecretRejected" }
+  /evidence/{agent}:
+    get:
+      tags: [verdict]
+      summary: Verdict + decoded breaching transactions ($0.05 via x402)
+      parameters: [{ $ref: "#/components/parameters/Agent" }]
+      responses:
+        "200": { description: OK }
+        "402": { description: payment required (x402) }
+  /mandate/{agent}:
+    get:
+      tags: [mandate]
+      summary: The committed AAE mandate (free)
+      parameters: [{ $ref: "#/components/parameters/Agent" }]
+      responses: { "200": { description: OK } }
+  /verify:
+    post:
+      tags: [verdict]
+      summary: Recompute a verdict from public inputs and check its signature (free, never gated, offline)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [agent, mandate, actions]
+              properties:
+                agent: { type: string }
+                mandate: { type: object, description: public AAE Verifiable Credential }
+                actions: { type: array, items: { type: object }, maxItems: 5000 }
+                signature: { type: object }
+      responses:
+        "200": { description: recomputed verdict }
+        "400": { description: invalid input (closed schema) }
+        "422": { $ref: "#/components/responses/SecretRejected" }
+  /registry:
+    get:
+      tags: [meta]
+      summary: Agents with committed mandates + current verdict (free; ranks NO_MANDATE lower)
+      responses: { "200": { description: OK } }
+  /info:
+    get: { tags: [meta], summary: Service metadata, responses: { "200": { description: OK } } }
+  /health:
+    get: { tags: [meta], summary: Health, responses: { "200": { description: OK } } }
+components:
+  parameters:
+    Agent:
+      name: agent
+      in: path
+      required: true
+      schema: { type: string }
+      description: Agent address, did:moltrust / did:web, or ERC-8004 reference (public).
+  responses:
+    SecretRejected:
+      description: A secret-shaped input was rejected (public inputs only).
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: secret_shaped_input_rejected }
+              field: { type: string }
+              reason: { type: string }
+  schemas:
+    VerdictFree:
+      type: object
+      properties:
+        agent: { type: string }
+        verdict: { type: string, enum: [ADHERENT, BREACHED, NO_MANDATE, NEEDS_REVIEW] }
+        mandate_tightness: { type: [number, "null"], minimum: 0, maximum: 1 }
+        recomputable: { type: boolean, const: true }
+        computedAt: { type: string, format: date-time }
