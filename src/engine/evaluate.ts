@@ -25,6 +25,11 @@ function withinWindow(ts: number, from: string, until: string): boolean {
  *  emitters) must be allowed — directly, or via its venueId (group match).
  *  An unrecognised trading address => inconclusive (never a guessed pass). */
 function checkVenue(action: DecodedAction, mandate: Mandate): { result: CheckResult; reason?: string } {
+  // Venue is enforced only if a whitelist is given. An empty/absent list means
+  // the mandate does not constrain venue (e.g. an output-token-only mandate).
+  if (!mandate.constraints.allowed_venues || mandate.constraints.allowed_venues.length === 0) {
+    return { result: "pass", reason: "venue not constrained" };
+  }
   const touched = action.venueAddressesTouched;
   if (touched.length === 0) {
     return action.inconclusive
@@ -64,12 +69,27 @@ function checkValidity(action: DecodedAction, mandate: Mandate): { result: Check
   return { result: "pass" };
 }
 
+/** Output-token check: the acquired (swap-output) token must equal the single
+ *  allowed token. Read from the swap event, so it is independent of venue/router
+ *  recognition (holds under 7702 self-execution). Enforced only if the mandate
+ *  pins an allowed_output_token; an undecoded out-token is inconclusive. */
+function checkOutputToken(action: DecodedAction, mandate: Mandate): { result: CheckResult; reason?: string } {
+  const allowed = mandate.constraints.allowed_output_token;
+  if (!allowed) return { result: "pass" }; // not constrained
+  if (action.outputToken == null) {
+    return { result: "inconclusive", reason: "output token not decodable from the swap" };
+  }
+  if (action.outputToken.toLowerCase() === allowed.toLowerCase()) return { result: "pass" };
+  return { result: "fail", reason: `acquired ${action.outputToken}; mandate allows only ${allowed}` };
+}
+
 export function evaluateAction(action: DecodedAction, mandate: Mandate): ActionEvaluation {
   const venue = checkVenue(action, mandate);
+  const outputToken = checkOutputToken(action, mandate);
   const notional = checkNotional(action, mandate);
   const validity = checkValidity(action, mandate);
-  const results = [venue.result, notional.result, validity.result];
-  const reasons = [venue.reason, notional.reason, validity.reason].filter(Boolean) as string[];
+  const results = [venue.result, outputToken.result, notional.result, validity.result];
+  const reasons = [venue.reason, outputToken.reason, notional.reason, validity.reason].filter(Boolean) as string[];
 
   let status: ActionEvaluation["status"];
   if (results.includes("fail")) status = "breached";
@@ -79,6 +99,7 @@ export function evaluateAction(action: DecodedAction, mandate: Mandate): ActionE
   return {
     action,
     venueCheck: venue.result,
+    outputTokenCheck: outputToken.result,
     notionalCheck: notional.result,
     validityCheck: validity.result,
     status,

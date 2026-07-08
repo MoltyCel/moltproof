@@ -23,6 +23,7 @@ export function parseMandateVc(vc: Record<string, unknown>): Mandate {
     valid_from: String(c.valid_from ?? ""),
     valid_until: String(c.valid_until ?? ""),
   };
+  if (c.allowed_output_token) constraints.allowed_output_token = String(c.allowed_output_token);
   if (!constraints.max_position_notional || !constraints.valid_from || !constraints.valid_until) {
     throw new MandateError("mandate VC missing required constraints (max_position_notional/valid_from/valid_until)");
   }

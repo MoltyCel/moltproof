@@ -14,10 +14,16 @@ export type Verdict =
 
 export type CheckResult = "pass" | "fail" | "inconclusive";
 
-/** The three v0 constraints of an AAE mandate. */
+/** The v0 constraints of an AAE mandate. Each is enforced only if present, so a
+ *  mandate can pin any subset (e.g. output-token + validity, no venue list). */
 export interface MandateConstraints {
-  /** Checksummed contract addresses the agent is allowed to trade on. */
+  /** Checksummed contract addresses the agent is allowed to trade on. Empty or
+   *  absent => venue is not constrained (the venue check is a no-op). */
   allowed_venues: string[];
+  /** The only token the agent is allowed to ACQUIRE (swap output), checksummed.
+   *  Read from the swap event, so it holds regardless of routing (incl. 7702
+   *  self-execution). Absent => output token not constrained. */
+  allowed_output_token?: string;
   /** Cap on position notional (in the mandate's quote asset / USD), as a string
    *  to preserve precision. */
   max_position_notional: string;
@@ -55,6 +61,9 @@ export interface DecodedAction {
   /** Position notional for this action in the quote asset, or null if not
    *  deterministically priceable from a pinned source. */
   notional: string | null;
+  /** The token acquired by this action (swap output), checksummed, or null if
+   *  it could not be decoded from the swap/transfer logs. Routing-independent. */
+  outputToken?: string | null;
   /** True when the action could NOT be fully decoded to (venue, notional, time)
    *  from a recomputable source — forces NEEDS_REVIEW rather than ADHERENT. */
   inconclusive: boolean;
@@ -65,6 +74,7 @@ export interface DecodedAction {
 export interface ActionEvaluation {
   action: DecodedAction;
   venueCheck: CheckResult;
+  outputTokenCheck: CheckResult;
   notionalCheck: CheckResult;
   validityCheck: CheckResult;
   /** action-level roll-up */

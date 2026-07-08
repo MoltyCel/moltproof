@@ -43,8 +43,10 @@ export function makeService(ctx: AppContext) {
           timestamp: b.action.timestamp,
           venues: b.action.venues,
           notional: b.action.notional,
+          outputToken: b.action.outputToken ?? null,
           failedChecks: {
             venue: b.venueCheck,
+            outputToken: b.outputTokenCheck,
             notional: b.notionalCheck,
             validity: b.validityCheck,
           },
@@ -105,7 +107,7 @@ export function makeService(ctx: AppContext) {
           beta: BETA_CHAINS.map((c) => c.id),
           all: CHAINS.map((c) => ({ id: c.id, status: c.status })),
         },
-        constraints_v0: ["allowed_venues", "max_position_notional", "valid_from/valid_until"],
+        constraints_v0: ["allowed_venues", "allowed_output_token", "max_position_notional", "valid_from/valid_until"],
         read_only: true,
         custody: false,
       };
