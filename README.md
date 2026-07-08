@@ -59,7 +59,18 @@ decoded to (venue, notional, time) from a recomputable source becomes
 
 Pricing uses x402 on Base (same pattern as MoltGuard); core verdict is free
 (free-first — the goal is adoption). MCP tools (`moltproof_verdict`, `_mandate`,
-`_evidence`, `_verify`, `_registry`) are exposed at `/mcp`.
+`_evidence`, `_verify`, `_registry`) are available.
+
+### MCP deployment note
+
+This service ships its own `/mcp` handler for **local / self-host** use. In the
+**moltrust.ch deployment, production MCP is served solely by the shared MolTrust
+MCP gateway** (`moltrust-mcp-http.service`, `:8002`, reachable at
+`https://api.moltrust.ch/mcp`). There, the `moltproof_*` tools are registered as
+read-only pass-throughs to this service's REST API on `127.0.0.1:3006/proof/*`.
+This service's own `/mcp` is **not** exposed via nginx on moltrust.ch — only
+`/proof/ → :3006` is routed; `/mcp` stays pointed at the shared gateway. Run the
+built-in `/mcp` only when self-hosting MoltProof standalone.
 
 ## Develop
 
