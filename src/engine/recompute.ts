@@ -3,7 +3,7 @@ import { parseMandateVc } from "./mandate.js";
 import { evaluateAction, rollUp } from "./evaluate.js";
 import { computeTightness } from "./tightness.js";
 import { verifyPayload, type JwsSignature } from "./sign.js";
-import { strip } from "./index.js";
+import { buildSigningCore } from "./verdictCore.js";
 
 // POST /verify — recompute a verdict from PUBLIC inputs and, if a signature is
 // supplied, check it against MoltProof's OWN published key (never a key from the
@@ -66,26 +66,18 @@ export function recomputeVerdict(body: VerifyBody, moltproofPublicKeyPem?: strin
     if (!moltproofPublicKeyPem) {
       sig = { present: true, valid: null, note: "MoltProof public key not configured; cannot verify (recompute still valid)" };
     } else {
-      // Reconstruct the exact payload that would have been signed and verify.
-      const payload: Omit<VerdictResult, "signature" | "computedAt"> = strip({
+      // Reconstruct the SAME public core the service signed (verdictCore) and verify.
+      const core = buildSigningCore({
         agent: body.agent,
         verdict: rolled.verdict,
-        mandate,
+        constraints: mandate.constraints,
         tightness,
+        counts: rolled.counts,
         breaches: rolled.breaches,
         inconclusiveActions: rolled.inconclusiveActions,
-        counts: rolled.counts,
         window: { from: mandate.constraints.valid_from, until: mandate.constraints.valid_until },
-        recomputable: true,
-        recompute: {
-          method:
-            "read public chain execution within validity window; decode venue from Swap-log emitter; check venue/notional/validity",
-          chains: [],
-          mandateSource: mandate.source,
-        },
-        computedAt: new Date(0).toISOString(),
       });
-      const ok = verifyPayload(payload, body.signature, moltproofPublicKeyPem);
+      const ok = verifyPayload(core, body.signature, moltproofPublicKeyPem);
       sig = { present: true, valid: ok, note: ok ? "signature valid for recomputed payload" : "signature does not match recomputed payload" };
     }
   }

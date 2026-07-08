@@ -14,11 +14,21 @@ export function computeTightness(mandate: Mandate): Tightness {
   const c = mandate.constraints;
   const notes: string[] = [];
 
-  // Venue specificity: fewer allowed venues => tighter. 1 venue ~ 1.0, decays.
-  const nVenues = Math.max(1, c.allowed_venues.length);
-  const venueSpecificity = clamp01(1 / nVenues);
-  if (c.allowed_venues.length === 0) notes.push("no venue whitelist — any venue allowed");
-  else if (c.allowed_venues.length > 8) notes.push("very broad venue whitelist");
+  // "What can it trade" specificity: a venue whitelist (fewer => tighter) OR,
+  // when venue is not constrained, a pinned output token is itself a real
+  // restriction on what the agent may acquire.
+  let venueSpecificity: number;
+  const nVenues = c.allowed_venues?.length ?? 0;
+  if (nVenues > 0) {
+    venueSpecificity = clamp01(1 / nVenues);
+    if (nVenues > 8) notes.push("very broad venue whitelist");
+  } else if (c.allowed_output_token) {
+    venueSpecificity = 0.8; // output-token constraint restricts acquisitions
+    notes.push("no venue whitelist; constrained by allowed_output_token");
+  } else {
+    venueSpecificity = 0; // nothing constrains what/where it trades
+    notes.push("no venue or output-token constraint — any trade allowed");
+  }
 
   // Notional tightness: finite, non-huge cap => tighter.
   let notionalTightness: number;

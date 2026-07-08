@@ -5,6 +5,7 @@ import { resolveMandate } from "./mandate.js";
 import { evaluateAction, rollUp } from "./evaluate.js";
 import { computeTightness } from "./tightness.js";
 import { signPayload } from "./sign.js";
+import { buildSigningCore } from "./verdictCore.js";
 
 export interface EngineDeps {
   store: MandateStore;
@@ -82,8 +83,21 @@ function finalize(
     computedAt: new Date(0).toISOString(), // caller stamps real time; deterministic default for tests
   };
   if (signingKeyPem) {
-    // Sign the verdict payload MINUS the signature field itself.
-    result.signature = signPayload(strip(result), signingKeyPem);
+    // Sign the public, reconstructable core (see verdictCore) so POST /proof/verify
+    // can reproduce the exact digest offline and validate the signature.
+    result.signature = signPayload(
+      buildSigningCore({
+        agent,
+        verdict: r.verdict,
+        constraints: r.mandate?.constraints ?? null,
+        tightness: r.tightness,
+        counts: r.counts,
+        breaches: r.breaches,
+        inconclusiveActions: r.inconclusiveActions,
+        window: r.window,
+      }),
+      signingKeyPem,
+    );
   }
   return result;
 }
