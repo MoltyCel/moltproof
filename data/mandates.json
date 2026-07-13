@@ -1,1 +1,52 @@
-[]
+[
+  {
+    "agent_did": "did:moltrust:0xd35ae5c22c117cf1b9ef870697ab0034314a59e2",
+    "agent_addresses": [
+      "0xD35AE5C22C117Cf1b9EF870697AB0034314A59e2"
+    ],
+    "constraints": {
+      "allowed_venues": [],
+      "allowed_output_token": "0x4200000000000000000000000000000000000006",
+      "max_position_notional": "20",
+      "valid_from": "2026-07-08T00:00:00Z",
+      "valid_until": "2026-07-15T00:00:00Z"
+    },
+    "source": {
+      "type": "inline",
+      "ref": "did:moltrust:0xd35ae5c22c117cf1b9ef870697ab0034314a59e2"
+    },
+    "vc": {
+      "@context": [
+        "https://www.w3.org/ns/credentials/v2"
+      ],
+      "type": [
+        "VerifiableCredential",
+        "AAEMandate"
+      ],
+      "profile": "draft-kroehl-agentic-trust-aae-00",
+      "issuer": "did:web:moltrust.ch",
+      "issuanceDate": "2026-07-08T00:00:00Z",
+      "credentialSubject": {
+        "id": "did:moltrust:0xd35ae5c22c117cf1b9ef870697ab0034314a59e2",
+        "agent_addresses": [
+          "0xD35AE5C22C117Cf1b9EF870697AB0034314A59e2"
+        ],
+        "constraints": {
+          "allowed_venues": [],
+          "allowed_output_token": "0x4200000000000000000000000000000000000006",
+          "max_position_notional": "20",
+          "valid_from": "2026-07-08T00:00:00Z",
+          "valid_until": "2026-07-15T00:00:00Z"
+        }
+      },
+      "proof": {
+        "type": "JsonWebSignature2020",
+        "created": "2026-07-08T00:00:00Z",
+        "verificationMethod": "did:web:moltrust.ch#moltproof-key-1",
+        "proofPurpose": "assertionMethod",
+        "jws": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDp3ZWI6bW9sdHJ1c3QuY2gjbW9sdHByb29mLWtleS0xIiwidHlwIjoiSldTIn0..RQvZNdxKWAJbdUSMtVwgRtOJDQGu24hnv1IqIZkWo2YP7AnqqMcQxw-lUkX-rlo5v30v-Uo0Zn78e0KfG1IqBA",
+        "payloadDigestSha256": "cbdea9db62ff081c6888b7d195695c7a1efdd6fada504626c5aebadbc9f5cd40"
+      }
+    }
+  }
+]
