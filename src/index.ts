@@ -86,6 +86,6 @@ app.onError((err, c) => {
 // Only listen when run directly (tests import `app` without binding a port).
 if (process.env.NODE_ENV !== "test" && process.argv[1]?.endsWith("index.js")) {
   const port = Number(process.env.PORT ?? 3006);
-  serve({ fetch: app.fetch, port });
+  serve({ fetch: app.fetch, port, hostname: "127.0.0.1" });
   log("info", { route: "boot", msg: `moltproof listening on ${port} (read-only)` });
 }
