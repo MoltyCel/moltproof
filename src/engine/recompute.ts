@@ -33,6 +33,11 @@ export function validateVerifyBody(raw: unknown): VerifyBody {
   if (!obj.mandate || typeof obj.mandate !== "object") throw new VerifyInputError("mandate must be an object");
   if (!Array.isArray(obj.actions)) throw new VerifyInputError("actions must be an array");
   if (obj.actions.length > 5000) throw new VerifyInputError("too many actions");
+  // An empty action list is not an input we can recompute a verdict over.
+  // Signing an ADHERENT over zero submitted actions would let a caller mint a
+  // clean verdict by sending nothing. Reject rather than guess what the caller
+  // meant; whether an observed-empty window is adherent is a separate question.
+  if (obj.actions.length === 0) throw new VerifyInputError("actions must not be empty");
   return {
     agent: obj.agent,
     mandate: obj.mandate as Record<string, unknown>,

@@ -33,8 +33,27 @@ export async function computeVerdict(agent: string, deps: EngineDeps): Promise<V
   }
 
   const window = { from: mandate.constraints.valid_from, until: mandate.constraints.valid_until };
-  const actions = await deps.reader.read(mandate.agent_addresses.length ? mandate.agent_addresses : [agent], window);
-  const evaluations = actions.map((a) => evaluateAction(a, mandate));
+  const read = await deps.reader.read(mandate.agent_addresses.length ? mandate.agent_addresses : [agent], window);
+
+  // No decoder for this chain: nothing was observed, so we cannot claim the
+  // agent stayed inside its mandate. NEEDS_REVIEW per its definition in
+  // types.ts — "could not decode execution from a recomputable source".
+  // Deliberately an early return: the roll-up in evaluate.ts is untouched, so
+  // an observed-but-empty window on a supported chain still rolls up as before.
+  if (read.unsupported) {
+    return finalize(agent, {
+      verdict: "NEEDS_REVIEW",
+      mandate,
+      tightness: computeTightness(mandate),
+      breaches: [],
+      inconclusiveActions: [],
+      counts: { evaluated: 0, adherent: 0, breached: 0, inconclusive: 0 },
+      window,
+      chainsUsed: deps.chainsUsed,
+    }, deps.signingKeyPem);
+  }
+
+  const evaluations = read.actions.map((a) => evaluateAction(a, mandate));
   const rolled = rollUp(evaluations, true);
   const tightness = computeTightness(mandate);
 

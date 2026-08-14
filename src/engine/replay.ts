@@ -12,9 +12,26 @@ export interface ExecutionWindow {
   until: string; // ISO
 }
 
+/** Result of an execution read.
+ *
+ *  `unsupported` distinguishes "this chain has no decoder in this build" from
+ *  "we looked and the agent did nothing". Both used to surface as an empty
+ *  array, which let a declared-but-undecodable chain roll up to ADHERENT — the
+ *  best verdict for an agent nobody could observe. The two cases must stay
+ *  distinguishable at the engine boundary.
+ *
+ *  Note this says nothing about the observed-but-empty case (`actions: []` with
+ *  `unsupported: false`). That semantics is deliberately unchanged here. */
+export interface ReadResult {
+  actions: DecodedAction[];
+  /** True when the chain is declared in the registry but this build has no
+   *  decoder for its kind, so no observation was attempted. */
+  unsupported: boolean;
+}
+
 export interface ExecutionReader {
   /** Read decoded trading actions for the given addresses within the window. */
-  read(addresses: string[], window: ExecutionWindow): Promise<DecodedAction[]>;
+  read(addresses: string[], window: ExecutionWindow): Promise<ReadResult>;
 }
 
 /** Deterministic reader for tests and for the seeded demonstrator record.
@@ -22,8 +39,8 @@ export interface ExecutionReader {
  *  the validity check can flag them. */
 export class StaticReader implements ExecutionReader {
   constructor(private actions: DecodedAction[]) {}
-  async read(_addresses: string[], _window: ExecutionWindow): Promise<DecodedAction[]> {
-    return [...this.actions];
+  async read(_addresses: string[], _window: ExecutionWindow): Promise<ReadResult> {
+    return { actions: [...this.actions], unsupported: false };
   }
 }
 
@@ -49,9 +66,12 @@ export class EvmSwapReader implements ExecutionReader {
     private timeoutMs = 8_000,
   ) {}
 
-  async read(addresses: string[], _window: ExecutionWindow): Promise<DecodedAction[]> {
+  async read(addresses: string[], _window: ExecutionWindow): Promise<ReadResult> {
     const chain = getChain(this.chainId);
-    if (!chain || chain.kind !== "evm") return [];
+    // Declared in the chain registry but no decoder for this kind in this build
+    // (e.g. solana, hyperliquid). Report it rather than returning an empty read
+    // that is indistinguishable from an idle agent.
+    if (!chain || chain.kind !== "evm") return { actions: [], unsupported: true };
     // Lazy import so offline tests never touch viem's network stack.
     const viem = await import("viem");
     const client = viem.createPublicClient({ transport: viem.http(this.rpcUrl) });
@@ -88,7 +108,7 @@ export class EvmSwapReader implements ExecutionReader {
         inconclusiveReason: undefined,
       });
     }
-    return out;
+    return { actions: out, unsupported: false };
   }
 }
 
