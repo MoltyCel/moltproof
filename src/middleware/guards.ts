@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { getClientIp } from "./clientIp.js";
 import { scanRequestParts } from "../security/noSecrets.js";
 
 // Shared guard layer (cross-review F10): HTTP routes AND the MCP tool layer call
@@ -51,7 +52,9 @@ export function rateLimit(opts: { windowMs: number; max: number }) {
   const hits = new Map<string, { count: number; reset: number }>();
   return async function (c: Context, next: Next): Promise<Response | void> {
     const now = Date.now();
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || c.req.header("x-real-ip") || "unknown";
+    // The first x-forwarded-for entry is whatever the caller wrote there.
+    // Proxy headers are honoured only behind a trusted proxy.
+    const ip = getClientIp(c);
     const key = `${ip}:${new URL(c.req.url).pathname.split("/").slice(0, 3).join("/")}`;
     const e = hits.get(key);
     if (!e || e.reset < now) {
